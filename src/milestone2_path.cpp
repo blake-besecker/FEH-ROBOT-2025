@@ -9,10 +9,6 @@
 // FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
 // FEHServo servo(FEHServo::Servo0);
 
-
-
-void ERCMain45()
-{
     FEHServo servo(FEHServo::Servo0); // declare servo arm
     //motors
     FEHMotor right_motor(FEHMotor::Motor2, 9); 
@@ -29,13 +25,60 @@ void ERCMain45()
     AnalogInputPin left_cell(FEHIO::Pin1);
     //cds cell
     AnalogInputPin cds(FEHIO::Pin14);
+
+void followPath(float time) {
+    float left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    float timestart = TimeNow();
+    //while at least one sensor is on the path
+    while (TimeNow() - timestart <= time) {
+        //a. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+        //c. set motor values according to sensor
+        //if we're on the left(only left is hit)
+        LCD.Clear();
+        LCD.WriteLine(left_cell.Value());
+        LCD.WriteLine(middle_cell.Value());
+        LCD.WriteLine(right_cell.Value());
+        while (left > 3.2 && middle < 3.2 && right < 3.2) {
+            //left right and go forward
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(30);
+            Sleep(0.01);
+        }
+        //if we're on the right(only right is hit)
+        while (right > 3.2 && middle < 3.2 && left < 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(30);
+            right_motor.SetPercent(20);
+            Sleep(0.01);
+        } 
+        //we must be in the middle
+        while (middle > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(20);
+            Sleep(0.01);
+        }
+        //d. sleep (set check interval)
+        Sleep(0.01);
+        //e. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    }
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    LCD.Write("done");
+}
+
+void ERCMain()
+{
     //constants
     const int MOVE_UP_RAMP = 1550;
     const int TURN_LEFT=220;
     const int TURN_BLUE=30;
     const int TURN_RED=30;
     const int START=175;
-    const int TURN_RAMP=320;
+    const int TURN_RAMP=330;
     //waiting for start light
     LCD.Write("waiting for start light");
     while (cds.Value() > 0.15) {
@@ -77,15 +120,20 @@ void ERCMain45()
     }
     left_motor.SetPercent(0);
     right_motor.SetPercent(0);
-    //move to light
+
+    followPath(20.0);
     left_encoder.ResetCounts();
     left_motor.SetPercent(20);
     right_motor.SetPercent(20);
-    boolean done = false;
-    while(1 ==1 ) {
-        LCD.Clear();
-        LCD.WriteLine(cds.Value());
-        if (cds.Value() < 0.35 && cds.Value() > 0.3) {
+    while(cds.Value() > 1.0) {
+        Sleep(0.01);
+    }
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    Sleep(0.5);
+    LCD.Clear();
+    LCD.WriteLine(cds.Value());
+        if (cds.Value() > 0.5) {
         LCD.Clear();
         LCD.WriteLine("it's blue");
         left_motor.SetPercent(0);
@@ -102,9 +150,8 @@ void ERCMain45()
         //drive straight
         left_motor.SetPercent(15);
         right_motor.SetPercent(15);
-        done = true;
     }
-    else if (cds.Value() < 0.15) {
+    else if (cds.Value() < 0.5) {
         LCD.Clear();
         LCD.WriteLine("it's red");
         left_motor.SetPercent(0);
@@ -121,13 +168,5 @@ void ERCMain45()
         //drive straight
         left_motor.SetPercent(15);
         right_motor.SetPercent(15);
-        done = true;
     }
-    Sleep(0.01);
-    if (done) break;
-    }
-    //read light, and depending on what it says write the color
-
-
-
 }
