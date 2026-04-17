@@ -1,0 +1,289 @@
+#include <FEH.h>
+#include <Arduino.h>
+#include <FEHUtility.h>
+#include <FEHServo.h>
+#include <FEHLCD.h>
+
+// Declare things like Motors, Servos, etc. here
+// For example:
+// FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
+// FEHServo servo(FEHServo::Servo0);
+    const int ARM_MIN = 500;
+    const int ARM_MAX = 2500;
+    FEHServo arm(FEHServo::Servo0); // declare servo arm
+    //motors
+    FEHMotor right_motor(FEHMotor::Motor2, 9); 
+    FEHMotor left_motor(FEHMotor::Motor0, 9); 
+    //encoders
+    DigitalEncoder left_encoder(FEHIO::Pin8);
+    DigitalEncoder right_encoder(FEHIO::Pin9);
+    //switches
+    DigitalInputPin back_left(FEHIO::Pin11);
+    DigitalInputPin back_right(FEHIO::Pin12);
+    //cell sensors
+    AnalogInputPin right_cell(FEHIO::Pin5);
+    AnalogInputPin middle_cell(FEHIO::Pin3);
+    AnalogInputPin left_cell(FEHIO::Pin1);
+    //cds cell
+    AnalogInputPin cds(FEHIO::Pin14);
+
+void followPath() {
+    float left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    //while at least one sensor is not on the path
+    while (left > 3.2 || right > 3.2 || middle > 3.2) {
+        //a. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+        //c. set motor values according to sensor
+        //if we're on the left(only left is hit)
+        LCD.Clear();
+        LCD.WriteLine(left_cell.Value());
+        LCD.WriteLine(middle_cell.Value());
+        LCD.WriteLine(right_cell.Value());
+        while (left > 3.2) {
+            //left right and go forward
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(30);
+            Sleep(0.001);
+        } 
+        //if we're on the right(only right is hit)
+        while (right > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(30);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        } 
+        //we must be in the middle
+        while (middle > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        }
+        //d. sleep (set check interval)
+        Sleep(0.01);
+        //e. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    }
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    LCD.Write("done");
+}
+
+void ERCMain3434343435456546()
+{
+    //constants
+    const int START=100;
+    const int TURN_BUCKET=470;
+    const int MOVE_BUCKET=745;
+    const int TURN_RAMP=250;
+    const int MOVE_RAMP=1500;
+    const int ADJUST=140;
+    const int MOVE_ADJUST=180;
+    const int MOVE_CRATE=650;
+    const int TURN_LEVERS=185;
+    const int MOVE_LEVERS=200;
+    const int RAMP_OFFSET=0;
+    //set arm mins and maxes;
+    arm.SetMin(ARM_MIN);
+    arm.SetMax(ARM_MAX);
+    //move arm fully up
+    arm.SetDegree(0);
+    //waiting for start light
+    LCD.Write("waiting for start light");
+    while (cds.Value() > 0.15) {
+        Sleep(0.01);
+    }
+    //backup until hit start button(back right is )
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < START) {
+        Sleep(0.01);
+    }
+    //stop
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //turn to face bucket
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < TURN_BUCKET) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //flip arm up to get apple
+    arm.SetDegree(70);
+    //go to it
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_BUCKET) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //flip arm up to hold apple
+    for (int i = 0; i<70;i++) {
+        arm.SetDegree(70-i);
+        Sleep(0.005);
+    }
+    //turn to go to start(should be same as bucket)
+    left_motor.SetPercent(30);
+    right_motor.SetPercent(-30);
+    while(left_encoder.Counts() < TURN_BUCKET) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //go to start
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < (MOVE_BUCKET+RAMP_OFFSET)) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+
+
+    //turn to go to ramp(should be same as bucket)
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < TURN_RAMP) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_RAMP) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //turn to dodge stand
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < ADJUST) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //move to dodge stand
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_ADJUST) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //turn to set back
+    left_motor.SetPercent(30);
+    right_motor.SetPercent(-30);
+    while(left_encoder.Counts() < ADJUST+10) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //move to crate
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_CRATE) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //flip arm down to drop apple
+    arm.SetDegree(80);
+    //back up a bit
+    left_motor.SetPercent(-40);
+    right_motor.SetPercent(-40);
+    while (left_encoder.Counts() < 50) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    Sleep(1.0);
+    //turn to go to levers
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < TURN_LEVERS) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    Sleep(1.0);
+    //flip arm down to get under levers
+    arm.SetDegree(0);
+
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_LEVERS) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    Sleep(1.0);
+    //flip arm down to flip switch
+    arm.SetDegree(130);
+    Sleep(1.0);
+    //back up
+    left_motor.SetPercent(-40);
+    right_motor.SetPercent(-40);
+    while (left_encoder.Counts() < START) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    Sleep(1.0);
+    //turn a little
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(-40);
+    while (left_encoder.Counts() < 20) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+
+    Sleep(1.0);
+    //flip arm down to prepare to flip up
+    arm.SetDegree(150);
+    Sleep(1.0);
+    //go back
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < START) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+
+    Sleep(1.0);
+    //flip arm up to flip lever up
+    arm.SetDegree(60);
+}

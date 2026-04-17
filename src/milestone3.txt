@@ -1,0 +1,162 @@
+#include <FEH.h>
+#include <Arduino.h>
+#include <FEHUtility.h>
+#include <FEHServo.h>
+#include <FEHLCD.h>
+
+// Declare things like Motors, Servos, etc. here
+// For example:
+// FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
+// FEHServo servo(FEHServo::Servo0);
+    const int ARM_MIN = 500;
+    const int ARM_MAX = 2500;
+    FEHServo arm(FEHServo::Servo0); // declare servo arm
+    //motors
+    FEHMotor right_motor(FEHMotor::Motor2, 9); 
+    FEHMotor left_motor(FEHMotor::Motor0, 9); 
+    //encoders
+    DigitalEncoder left_encoder(FEHIO::Pin8);
+    DigitalEncoder right_encoder(FEHIO::Pin9);
+    //switches
+    DigitalInputPin back_left(FEHIO::Pin11);
+    DigitalInputPin back_right(FEHIO::Pin12);
+    //cell sensors
+    AnalogInputPin right_cell(FEHIO::Pin5);
+    AnalogInputPin middle_cell(FEHIO::Pin3);
+    AnalogInputPin left_cell(FEHIO::Pin1);
+    //cds cell
+    AnalogInputPin cds(FEHIO::Pin14);
+
+void followPath() {
+    float left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    //while at least one sensor is not on the path
+    while (left > 3.2 || right > 3.2 || middle > 3.2) {
+        //a. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+        //c. set motor values according to sensor
+        //if we're on the left(only left is hit)
+        LCD.Clear();
+        LCD.WriteLine(left_cell.Value());
+        LCD.WriteLine(middle_cell.Value());
+        LCD.WriteLine(right_cell.Value());
+        while (left > 3.2) {
+            //left right and go forward
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(30);
+            Sleep(0.001);
+        }
+        //if we're on the right(only right is hit)
+        while (right > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(30);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        } 
+        //we must be in the middle
+        while (middle > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        }
+        //d. sleep (set check interval)
+        Sleep(0.01);
+        //e. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    }
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    LCD.Write("done");
+}
+
+void ERCMain44()
+{
+    //constants
+    const int START=150;
+    const int TURN_WINDOW=410;
+    const int OPEN_WINDOW=250;
+    const int MOVE_WINDOW=820;
+    const int PAST_WINDOW=60;
+    //set arm mins and maxes
+    arm.SetMin(ARM_MIN);
+    arm.SetMax(ARM_MAX);
+    //move arm fully up
+    arm.SetDegree(0);
+    //waiting for start light
+    LCD.Write("waiting for start light");
+    while (cds.Value() > 0.15) {
+        Sleep(0.01);
+    }
+    //backup until hit start button(back right is )
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < START) {
+        Sleep(0.01);
+    }
+    //stop
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //turn to face window
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < TURN_WINDOW) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+
+    left_motor.SetPercent(40);
+    right_motor.SetPercent(40);
+    while (left_encoder.Counts() < MOVE_WINDOW) {
+        Sleep(0.01);
+    }
+    //stop
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //move arm to catch window handle
+    arm.SetDegree(20);
+    //turn to be parallel to window
+    left_motor.SetPercent(30);
+    right_motor.SetPercent(-30);
+    while(left_encoder.Counts() < OPEN_WINDOW) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //move arm to catch window handle
+    arm.SetDegree(0);
+    //turn to be past window
+    left_motor.SetPercent(30);
+    right_motor.SetPercent(-30);
+    while(left_encoder.Counts() < PAST_WINDOW) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //move arm to catch window handle
+    arm.SetDegree(20);
+    //turn to be past window
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < PAST_WINDOW) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    //turn to close window
+    left_motor.SetPercent(-30);
+    right_motor.SetPercent(30);
+    while(left_encoder.Counts() < OPEN_WINDOW) {
+        Sleep(0.01);
+    }
+    left_encoder.ResetCounts();
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+}

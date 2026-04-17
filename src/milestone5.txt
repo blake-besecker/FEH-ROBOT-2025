@@ -1,0 +1,160 @@
+#include <FEH.h>
+#include <Arduino.h>
+#include <FEHUtility.h>
+#include <FEHServo.h>
+#include <FEHLCD.h>
+
+// Declare things like Motors, Servos, etc. here
+// For example:
+// FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
+// FEHServo servo(FEHServo::Servo0);
+    const int ARM_MIN = 800;
+    const int ARM_MAX = 2500;
+    FEHServo arm(FEHServo::Servo0); // declare servo arm
+    //motors
+    FEHMotor right_motor(FEHMotor::Motor2, 9); 
+    FEHMotor left_motor(FEHMotor::Motor0, 9); 
+    //encoders
+    DigitalEncoder left_encoder(FEHIO::Pin8);
+    DigitalEncoder right_encoder(FEHIO::Pin9);
+    //switches
+    DigitalInputPin back_left(FEHIO::Pin11);
+    DigitalInputPin back_right(FEHIO::Pin12);
+    //cell sensors
+    AnalogInputPin right_cell(FEHIO::Pin5);
+    AnalogInputPin middle_cell(FEHIO::Pin3);
+    AnalogInputPin left_cell(FEHIO::Pin1);
+    //cds cell
+    AnalogInputPin cds(FEHIO::Pin14);
+
+void followPath() {
+    float left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    //while at least one sensor is not on the path
+    while (left > 3.2 || right > 3.2 || middle > 3.2) {
+        //a. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+        //c. set motor values according to sensor
+        //if we're on the left(only left is hit)
+        LCD.Clear();
+        LCD.WriteLine(left_cell.Value());
+        LCD.WriteLine(middle_cell.Value());
+        LCD.WriteLine(right_cell.Value());
+        while (left > 3.2) {
+            //left right and go forward
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(30);
+            Sleep(0.001);
+        } 
+        //if we're on the right(only right is hit)
+        while (right > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(30);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        } 
+        //we must be in the middle
+        while (middle > 3.2) {
+            left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
+        }
+        //d. sleep (set check interval)
+        Sleep(0.01);
+        //e. update sensor values
+        left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
+    }
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    LCD.Write("done");
+}
+
+void drive(int motorPercents, int encoderCounts) {
+    //drive with given percent until encoder counts are done
+    left_motor.SetPercent(motorPercents);
+    right_motor.SetPercent(motorPercents);
+    while (left_encoder.Counts() < encoderCounts) {
+        Sleep(0.01);
+    }
+    //stop
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    left_encoder.ResetCounts();
+}
+
+void turn(String direction, int motorPercents, int encoderCounts) {
+    int directionMultLeft = 1, directionMultRight = 1;
+    if (direction.equals("left")) {
+        directionMultLeft = -1;
+    } else {
+        directionMultRight = -1;
+    }
+    //drive with given opposite percent until encoder counts are done
+    left_motor.SetPercent(motorPercents*directionMultLeft);
+    right_motor.SetPercent(motorPercents*directionMultRight);
+    while (left_encoder.Counts() < encoderCounts) {
+        Sleep(0.01);
+    }
+    //stop
+    left_motor.SetPercent(0);
+    right_motor.SetPercent(0);
+    left_encoder.ResetCounts();
+}
+
+void doComposter() {
+    //complete composter task. assumes you are a standard distance away from composter
+    const int topPosition = 70;
+    const int bottomPosition = 180;
+    const int turnCounts = 35;
+    int difference = bottomPosition-topPosition;
+    //flip forward to get arm into composter slot
+    for (int i = 0; i<4; i++) {
+        arm.SetDegree(0);
+        Sleep(0.25);
+        arm.SetDegree(topPosition);
+        Sleep(1.0);
+        for (int i =0; i<difference; i++) {
+            arm.SetDegree(topPosition+i);
+            Sleep(0.01);
+        }
+
+        for (int i =0; i<turnCounts; i++) {
+            turn("right", 40, 1);
+            Sleep(0.001);
+        }
+        Sleep(1.0);
+        arm.SetDegree(topPosition);
+        Sleep(1.0);
+        for (int i =0; i<turnCounts; i++) {
+            turn("left", 40, 1);
+            Sleep(0.001);
+        }
+    }
+}
+
+void ERCMain224242424()
+{
+    //constants
+    const int START=125;
+    const int TURN_COMPOSTER=580;
+    const int MOVE_COMPOSTER=225;
+    //set arm mins and maxes;
+    arm.SetMin(ARM_MIN);
+    arm.SetMax(ARM_MAX);
+    //move arm fully up
+    arm.SetDegree(0);
+    // waiting for start light
+    LCD.Write("waiting for start light");
+    while (cds.Value() > 0.15) {
+        Sleep(0.01);
+    }
+    //backup until hit start button(back right is )
+    drive(40, START);
+    turn("left", 40, TURN_COMPOSTER);
+    //go to it
+    drive(40, MOVE_COMPOSTER);
+    doComposter();
+    turn("right", 40, 50);
+    drive(-40, MOVE_COMPOSTER+200);
+}
