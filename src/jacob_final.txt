@@ -1,0 +1,67 @@
+#include <FEH.h>
+#include <Arduino.h>
+#include <FEHUtility.h>
+#include <FEHServo.h>
+#include <FEHLCD.h>
+#include <FEHRCS.h>
+
+// Declare things like Motors, Servos, etc. here
+// For example:
+// FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
+// FEHServo servo(FEHServo::Servo0);
+    const int ARM_MIN = 800;
+    const int ARM_MAX = 2500;
+    FEHServo arm(FEHServo::Servo0); // declare servo arm
+    //motors
+    FEHMotor right_motor(FEHMotor::Motor2, 9); 
+    FEHMotor left_motor(FEHMotor::Motor0, 9); 
+    //encoders
+    DigitalEncoder left_encoder(FEHIO::Pin8);
+    DigitalEncoder right_encoder(FEHIO::Pin9);
+    //switches
+    DigitalInputPin back_left(FEHIO::Pin11);
+    DigitalInputPin back_right(FEHIO::Pin12);
+    //cell sensors
+    AnalogInputPin right_cell(FEHIO::Pin5);
+    AnalogInputPin middle_cell(FEHIO::Pin3);
+    AnalogInputPin left_cell(FEHIO::Pin1);
+    //cds cell
+    AnalogInputPin cds(FEHIO::Pin14);
+
+
+
+void doWindow() {
+    Sleep(2.0);
+}
+
+void doBucket() {
+    Sleep(2.0);
+}
+void doCompost() {
+    Sleep(2.0);
+}
+
+void ERCMain6767676767676()
+{
+    int buttonPushInDistance = 0;
+    drive('f', 2.4 + buttonPushInDistance, 40);
+    drive('b', 10.5, 40);
+    turn('l', 135, 40);
+    drive('f', 9, 40);
+    doWindow();
+    drive('b', 4, 40);
+    turn('l', 90, 40);
+    drive('f', 4, 40);
+    doBucket();
+    drive('b', 7, 40);
+    turn('l', 90, 40);
+    drive('f', 7, 40);
+    turn('r', 90, 40);
+    drive('f', 10, 40);
+    turn('l', 90, 40);
+    doCompost();
+    turn('l', 90, 40);
+    drive('f', 10, 40);
+    turn('r', 45, 40);
+    drive('f', 7 + buttonPushInDistance, 40);
+}

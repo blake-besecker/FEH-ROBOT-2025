@@ -29,8 +29,6 @@
     AnalogInputPin cds(FEHIO::Pin14);
 
 void followPath() {
-    const int SMALL=20;
-    const int BIG=30;
     float left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
     //while at least one sensor is not on the path
     while (left > 3.2 || right > 3.2 || middle > 3.2) {
@@ -45,23 +43,23 @@ void followPath() {
         while (left > 3.2) {
             //left right and go forward
             left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
-            left_motor.SetPercent(SMALL);
-            right_motor.SetPercent(BIG);
-            Sleep(0.00001);
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(30);
+            Sleep(0.001);
         } 
         //if we're on the right(only right is hit)
         while (right > 3.2) {
             left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
-            left_motor.SetPercent(BIG);
-            right_motor.SetPercent(SMALL);
-            Sleep(0.00001);
+            left_motor.SetPercent(30);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
         } 
         //we must be in the middle
         while (middle > 3.2) {
             left = left_cell.Value(), middle = middle_cell.Value(), right = right_cell.Value();
-            left_motor.SetPercent(SMALL);
-            right_motor.SetPercent(SMALL);
-            Sleep(0.00001);
+            left_motor.SetPercent(20);
+            right_motor.SetPercent(20);
+            Sleep(0.001);
         }
         //d. sleep (set check interval)
         Sleep(0.01);
@@ -125,98 +123,53 @@ void turn(char direction, int motorPercents, int encoderCounts) {
     left_encoder.ResetCounts();
 }
 
-void jacobTurn(char direction, float degrees, int speed) {
-    //Sets up inital variables
-    left_encoder.ResetCounts();
-    int encoderCount = (int)(40.4890175226 * ((degrees / 360) * (7.1 * 3.141592653)));
-    int d = 1;
-    if (direction == 'l' || direction == 'L') {
-        d *= -1;
-    }
-    if (encoderCount < 21) { //For rotation below .5 inches
-        left_motor.SetPercent(15 * d);
-        right_motor.SetPercent(15 * d * -1);
-        while (left_encoder.Counts() < encoderCount) {
-            Sleep(0.01);
-        }
-        left_motor.SetPercent(0);
-        right_motor.SetPercent(0);
-        left_encoder.ResetCounts();
-    } else { //For rotation above .5 inches
-        left_motor.SetPercent(speed * d);
-        right_motor.SetPercent(speed * d * -1);
-        while (left_encoder.Counts() < encoderCount - 20) {
-            Sleep(0.01);
-        }
-        left_motor.SetPercent(15 * d);
-        right_motor.SetPercent(15 * d * -1);
-        while (left_encoder.Counts() < encoderCount) {
-            Sleep(0.01);
-        }
-        left_motor.SetPercent(0);
-        right_motor.SetPercent(0);
-        left_encoder.ResetCounts();
-    }
-}
+
 
 
 void doButtons() {
-    // const int MOVE_BUTTON = 325;
-    const int TURN_BLUE=25;
-    const int TURN_RED=25;
+    const int MOVE_BUTTON = 375;
+    const int TURN_BLUE=35;
+    const int TURN_RED=35;
     const int MOVE_LIGHT=120;
-    // drive('f', 20, MOVE_LIGHT);
-    // Sleep(0.25);
-    // followPath();
-    // Sleep(0.25);
-    // drive('f', 20, MOVE_LIGHT);
-    // Sleep(1.0);
-    // LCD.Clear();
-    // LCD.WriteLine(cds.Value());
-    // if (cds.Value() > 0.2) {
-    //     LCD.Clear();
-    //     LCD.WriteLine("it's blue");
-    //     LCD.WriteLine(cds.Value());
-    //     //stop
-    //     left_motor.SetPercent(0);
-    //     right_motor.SetPercent(0);
-    //     Sleep(0.5);
-    //     //turn to face blue
-    //     turn('l', 20, TURN_BLUE);
-    //     //drive straight
-    //     drive('f', 40, MOVE_BUTTON);
-    // }
-    // else {
-    //     LCD.Clear();
-    //     LCD.WriteLine("it's red");
-    //     LCD.WriteLine(cds.Value());
-    //     left_motor.SetPercent(0);
-    //     right_motor.SetPercent(0);
-    //     Sleep(0.5);
-    //     //code for hitting red button
-    //     //turn to face red
-    //     turn('l', 20, TURN_RED);
-    //     //drive straight
-    //     drive('f', 40, MOVE_BUTTON);
-    // }
-    left_motor.SetPercent(40);
-    right_motor.SetPercent(40);
-    while (!right_switch.Value() && !left_switch.Value()) {
-        Sleep(0.001);
+    followPath();
+    drive('f', 20, MOVE_LIGHT);
+    Sleep(0.25);
+    LCD.Clear();
+    LCD.WriteLine(cds.Value());
+    if (cds.Value() > 0.2) {
+        LCD.Clear();
+        LCD.WriteLine("it's blue");
+        LCD.WriteLine(cds.Value());
+        //stop
+        left_motor.SetPercent(0);
+        right_motor.SetPercent(0);
+        Sleep(0.5);
+        //turn to face blue
+        turn('l', 20, TURN_BLUE);
+        //drive straight
+        drive('f', 40, MOVE_BUTTON);
     }
-    left_motor.SetPercent(0);
-    right_motor.SetPercent(0);
-    left_encoder.ResetCounts();
+    else {
+        LCD.Clear();
+        LCD.WriteLine("it's red");
+        LCD.WriteLine(cds.Value());
+        left_motor.SetPercent(0);
+        right_motor.SetPercent(0);
+        Sleep(0.5);
+        //code for hitting red button
+        //turn to face red
+        turn('l', 20, TURN_RED);
+        //drive straight
+        drive('f', 40, MOVE_BUTTON);
+    }
 }
 
 void doWindow() {
-    const int TURN_WINDOW=360;
+    const int TURN_WINDOW=370;
     // const int TURN_WINDOW=400;
-    const int OPEN_WINDOW=190;
+    const int OPEN_WINDOW=160;
     const int MOVE_WINDOW=780;
-    const int WINDOW_OFFSET=200;
-    //use this on day of if want to not do buttons:
-    // const int WINDOW_OFFSET=500;
+    const int PAST_WINDOW=60;
     //turn to face window
     turn('l', 30, TURN_WINDOW);
     //go to window
@@ -225,19 +178,7 @@ void doWindow() {
     //move arm to catch window handle
     arm.SetDegree(28);
     //turn to be parallel to window
-    //drive with given opposite percent until encoder counts are done
-    left_motor.SetPercent(30);
-    right_motor.SetPercent(-30);
-    float t = TimeNow();
-    while (left_encoder.Counts() < OPEN_WINDOW && (TimeNow() - t) < 5.0) {
-        Sleep(0.01);
-    }
-    //stop
-    left_motor.SetPercent(0);
-    right_motor.SetPercent(0);
-    left_encoder.ResetCounts();
-
-
+    turn('r', 30, OPEN_WINDOW);
     Sleep(0.5);
     //move arm to catch window handle
     // arm.SetDegree(0);
@@ -254,7 +195,7 @@ void doWindow() {
     turn('l', 30, OPEN_WINDOW);
     Sleep(0.5);
     //go back to start
-    drive('b', 40, MOVE_WINDOW+WINDOW_OFFSET);
+    drive('b', 40, MOVE_WINDOW);
 }
 void doApplesAndLevers() {
     const int START=100;
@@ -262,8 +203,7 @@ void doApplesAndLevers() {
     const int TURN_BUCKET=60;
     const int MOVE_BUCKET=745;
     const int TURN_RAMP=650;
-    // const int MOVE_RAMP=1600;
-    const int MOVE_RAMP=1550;
+    const int MOVE_RAMP=1500;
     const int ADJUST=140;
     const int MOVE_ADJUST=280;
     const int MOVE_CRATE=450;
@@ -275,71 +215,69 @@ void doApplesAndLevers() {
     const int LEVER_ADJUST=20;
     //set arm mins and maxes;
     //turn to face bucket
-    // turn('l', 30, TURN_BUCKET);
-    // //flip arm up to get apple
-    // arm.SetDegree(95);
-    // //go to it
-    // drive('f', 40, MOVE_BUCKET);
-    // Sleep(0.25);
-    // //flip arm up to hold apple(gradually)
-    // for (int i = 0; i<75;i++) {
-    //     arm.SetDegree(85-i);
-    //     Sleep(0.005);
-    // }
-    // Sleep(0.25);
-    // //turn to go to start(should be same as bucket)
-    // turn('r', 30, TURN_AFTER_BUCKET);
-    // //go to start
-    // drive('f', 40, MOVE_BUCKET);
+    turn('l', 30, TURN_BUCKET);
+    //flip arm up to get apple
+    arm.SetDegree(95);
+    //go to it
+    drive('f', 40, MOVE_BUCKET);
+    Sleep(0.25);
+    //flip arm up to hold apple(gradually)
+    for (int i = 0; i<75;i++) {
+        arm.SetDegree(85-i);
+        Sleep(0.005);
+    }
+    Sleep(0.25);
+    //turn to go to start(should be same as bucket)
+    turn('r', 30, TURN_AFTER_BUCKET);
+    //go to start
+    drive('f', 40, MOVE_BUCKET);
     //turn to go to ramp
-    // turn('r', 30, TURN_RAMP);
-    jacobTurn('r', 35, 40);
+    turn('r', 30, TURN_RAMP);
     // drive up ramp
-    drive('f', 40, MOVE_RAMP); 
+    drive('f', 40, MOVE_RAMP);
     Sleep(0.1);
-
-    // //turn to dodge stand
-    // turn('l', 30, ADJUST);
-    // Sleep(0.1);
-    // //move to dodge stand
-    // drive('f', 40, MOVE_ADJUST);
-    // Sleep(0.1);
-    // //turn to set back
-    // turn('r', 30, ADJUST+ADJUST_OFFSET);
-    // Sleep(0.1);
-    // //move to crate
-    // drive('f', 40, MOVE_CRATE);
-    // //flip arm down to drop apple
-    // arm.SetDegree(100);
-    // //back up a bit
-    // drive('f', 40, BACK_UP);
-    // //stop
-    // //turn to go to levers
-    // Sleep(0.25);
-    // turn('l', 30, TURN_LEVERS);
-    // Sleep(0.25);
-    // //flip arm up to get on top of levers
-    // arm.SetDegree(40);
-    // Sleep(0.5);
-    // drive('f', 40, MOVE_LEVERS);
-    // Sleep(0.5);
-    // //flip arm down to flip switch
-    // arm.SetDegree(130);
-    // Sleep(0.5);
-    // //back up
-    // drive('b', 40, BACK_UP);
-    // Sleep(0.5);
-    // //turn a little
-    // Sleep(0.5);
-    // //flip arm down to prepare to flip up
-    // arm.SetDegree(180);
-    // Sleep(0.5);
-    // //go back(sleep some to give it time)
-    // drive('f', 40, BACK_UP);    
-    // Sleep(0.5);
-    // //flip arm up to flip lever up
-    // arm.SetDegree(110);
-    // Sleep(0.5);
+    //turn to dodge stand
+    turn('l', 30, ADJUST);
+    Sleep(0.1);
+    //move to dodge stand
+    drive('f', 40, MOVE_ADJUST);
+    Sleep(0.1);
+    //turn to set back
+    turn('r', 30, ADJUST+ADJUST_OFFSET);
+    Sleep(0.1);
+    //move to crate
+    drive('f', 40, MOVE_CRATE);
+    //flip arm down to drop apple
+    arm.SetDegree(100);
+    //back up a bit
+    drive('f', 40, BACK_UP);
+    //stop
+    //turn to go to levers
+    Sleep(0.25);
+    turn('l', 30, TURN_LEVERS);
+    Sleep(0.25);
+    //flip arm up to get on top of levers
+    arm.SetDegree(40);
+    Sleep(0.5);
+    drive('f', 40, MOVE_LEVERS);
+    Sleep(0.5);
+    //flip arm down to flip switch
+    arm.SetDegree(130);
+    Sleep(0.5);
+    //back up
+    drive('b', 40, BACK_UP);
+    Sleep(0.5);
+    //turn a little
+    Sleep(0.5);
+    //flip arm down to prepare to flip up
+    arm.SetDegree(180);
+    Sleep(0.5);
+    //go back(sleep some to give it time)
+    drive('f', 40, BACK_UP);    
+    Sleep(0.5);
+    //flip arm up to flip lever up
+    arm.SetDegree(110);
+    Sleep(0.5);
 }
 
 void doComposter() {
@@ -350,7 +288,7 @@ void doComposter() {
     const int topPosition = 40;
     const int bottomPosition = 180;
     const int BACK_UP = 150;
-    const int SMALL_BACK_UP = 40;
+    const int SMALL_BACK_UP = 20;
     const int FINAL_ARM_OFFSET = 35;
 
     int difference = bottomPosition-topPosition;
@@ -389,20 +327,6 @@ void doComposter() {
 
     drive('f', 40, SMALL_BACK_UP);
     Sleep(0.25);
-    drive('b', 40, SMALL_BACK_UP);
-    Sleep(0.25);
-    turn('r', 40, 500);
-    Sleep(0.25);
-    arm.SetDegree(100);
-    Sleep(0.25);
-    turn('l', 40, 250);
-    Sleep(0.25);
-    arm.SetDegree(0);
-    Sleep(0.25);
-    turn('l', 40, 250);
-    Sleep(0.25);
-    drive('f', 40, SMALL_BACK_UP);
-    Sleep(0.25);
     turn('r', 40, TURN_FACE_COMPOSTER);
     Sleep(0.25);
     arm.SetDegree(0);
@@ -412,7 +336,7 @@ void doComposter() {
     Sleep(0.25);
 }
 
-void ERCMain()
+void ERCMain6868684964()
 {
     const int START=125;
     //going to buttons constants
@@ -428,13 +352,13 @@ void ERCMain()
     arm.SetMax(ARM_MAX);
     //move arm fully up
     arm.SetDegree(0);
-    RCS.InitializeTouchMenu("0150F3VKF");
-    WaitForFinalAction();
+    // RCS.InitializeTouchMenu("0150F3VKF");
+    // WaitForFinalAction();
     // waiting for start light
-    LCD.Write("waiting for start light");
-    while (cds.Value() > 0.15) {
-       Sleep(0.01);
-    }
+    //LCD.Write("waiting for start light");
+    //while (cds.Value() > 0.15) {
+    //    Sleep(0.01);
+    //}
     Sleep(0.25);
 
     left_motor.SetPercent(40);
@@ -458,20 +382,19 @@ void ERCMain()
     arm.SetDegree(0);
     //HUMIDIFIER BUTTONS
     //turn and drive to button corner
-    jacobTurn('l', 88, 40);
-    // turn('l', 40, TURN_TO_BUTTONS);
-    // Sleep(0.5);
-    // drive('f', 40, DRIVE_TO_BUTTON_START);
-    // Sleep(0.5);
-    // turn('r', 40, ALIGN_BUTTON_START);
-    // Sleep(0.5);
+    turn('l', 40, TURN_TO_BUTTONS);
+    Sleep(0.5);
+    drive('f', 40, DRIVE_TO_BUTTON_START);
+    Sleep(0.5);
+    turn('r', 40, ALIGN_BUTTON_START);
+    Sleep(0.5);
     //do buttons(assumes you are in front of black line facing buttons)
     arm.SetDegree(0);
     doButtons();
     //GO BACK TO END
     //back up
     drive('b', 40, BACK_OFF_BUTTONS);
-    jacobTurn('l', 90, 40);
+    turn('l', 40, TURN_TO_END);
     //turn to face end button
     //drive back and hit end button
     drive('f', 40, GO_TO_END);
